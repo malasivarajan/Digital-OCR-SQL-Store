@@ -1,0 +1,44 @@
+Enter                              /*  SITE LEVEL DATA 
+                 POST_DT_UA,POST_DT_IMP,ADJ_PROVIDER_UA,ADJ_PROVIDER_IMP,EST_REACH,EST_IMP*/
+
+
+SELECT
+    e.DATA_DATE,
+    CAMPAIGN_tag_ID,
+    INTERNET_MEDIA_CREDIT_ID,
+    REPORTABLE_GEOGRAPHY_DESC,
+    d.name,
+    RAW_PROVIDER_UNIQUE_AUDIENCE AS POST_DT_UA,
+    RAW_PROVIDER_IMPRESSIONS     AS POST_DT_IMP,
+    PROVIDER_UNIQUE_AUDIENCE,
+    PROVIDER_IMPRESSIONS,
+    unique_audience_ratio,
+    impression_ratio,
+    ADJUSTED_PROVIDER_UNIQUE_AUDIENCE,
+    ADJUSTED_PROVIDER_IMPRESSIONS,
+    UNIQUE_AUDIENCE_SCALING_FACTOR,
+    IMPRESSION_SCALING_FACTOR,
+    ESTIMATED_REACH,
+    ESTIMATED_IMPRESSIONS
+FROM
+    ETL_STG_CROSS_PUBLISHER_PROVIDER_INTERNET_ADVERTISEMENT_CAMPAIGN_FACT_CLASSIC_HISTORY e
+JOIN campaign c
+ON
+    e.campaign_id=c.campaign_id
+AND c.released_for_processing_flag='Y'
+ left outer join demographic d
+ON
+    d.demographic_id=e.demographic_id
+JOIN reportable_geography rg
+ON
+    rg.REPORTABLE_GEOGRAPHY_CODE=e.geography_code
+WHERE CAMPAIGN_ID='$campaign_id$'
+    and DATA_DATE='$data_date$'
+    and GEOGRAPHY_CODE='$Geography code corresponding to the country$'
+    AND AGGREGATION_TYPE=4 ( 2 for campaign level and  4 for site level)
+    --(eg  for the where clause) */
+/*WHERE
+    c.CAMPAIGN_ID=279000154
+AND DATA_DATE in ('2014-08-04','2014-08-05')
+AND AGGREGATION_TYPE=4
+AND GEOGRAPHY_CODE=1001 file contents here*/
