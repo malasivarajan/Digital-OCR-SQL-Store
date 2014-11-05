@@ -1,0 +1,26 @@
+SELECT DISTINCT
+    CAMPAIGN_tag_id,
+    campaign_name,
+    collection_start_date
+FROM
+    (
+        SELECT
+            CP.*,
+            CC.*,
+            C.*
+        FROM
+            CAMPAIGN_GROSS_RATING_POINT_FACT cp
+        JOIN CAMPAIGN_COUNTRY cc
+        ON
+            CP.CAMPAIGN_ID = CC.CAMPAIGN_ID
+        AND cc.IS_PRIMARY_COUNTRY_FLAG='Y'
+        AND cp.geography_code=1036--$(geography_code)$
+        AND cc.released_for_processing_flag='Y'
+        AND cp.data_date='2014-02-15'--$(latest_data_date)$
+        AND cp.released_for_processing_flag='Y'
+        JOIN campaign c
+        ON
+            c.campaign_id=cp.campaign_id
+        AND c.released_for_processing_flag='Y'
+        AND c.campaign_status_type_code=3
+   )A
