@@ -1,7 +1,7 @@
 1  --******************************************************** 
 2 -- AUTHOR    : Madhu Ramakrishnan
-3 -- PURPOSE   : The user here is supposed to fetch records when the data required to analyse for all placements belonging to
-4 --                 a particular site or for all sites belonging to the campaign for a particular geography
+3 -- PURPOSE   : When the user requires data to analyse Placement level data for all placements belonging to
+4 --                 a particular site or for single placement belonging to that site for a particular geography
 5 -- INPUTS    :Level_1_id=campaign_id, 
 6 --            Level_2_id=Site_id(Internet_media_credit_id) 
 7 --            Level_3_id=data_date
