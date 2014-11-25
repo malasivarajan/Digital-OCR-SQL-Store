@@ -1,4 +1,20 @@
-Enter                              /*  SITE LEVEL DATA 
+1 --********************************************************  
+2 2 -- AUTHOR    : Madhu Ramakrishnan 
+3 3 -- PURPOSE   : The user here is supposed to fetch when the data is required to analyse for a particular site belonging to 
+4 4 --                 a campaign or for all sites belonging to the campaign for a particular geography 
+5 5 -- INPUTS    :Level_1_id=campaign_id,  
+6 6 --            Level_2_id=if needed specify in where clause ,Site_id(Internet_media_credit_id)  
+7 7 --            Level_3_id=data_date 
+8 8 --            Level_4=geography_type 
+9 9 --            Level_5=aggregation_type 
+10 10 -- 
+11 11 -- NOTES:aggregation_type(2=campaign_level,3=Designated Market area Level,4=site_Level,5=placement_level)  
+12 12 --  
+13 13 -- SERVER/DB :jdbc:netezza://nantz40.nielsen.com:5480/MCH_NOCR_PROD_PG1  
+14 14 --  
+15 15 --********************************************************  
+
+/*  SITE LEVEL DATA 
                  POST_DT_UA,POST_DT_IMP,ADJ_PROVIDER_UA,ADJ_PROVIDER_IMP,EST_REACH,EST_IMP*/
 
 
