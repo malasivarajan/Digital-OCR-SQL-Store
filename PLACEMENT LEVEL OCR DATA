@@ -1,21 +1,18 @@
-   --******************************************************** 
-2 -- 
-3 -- AUTHOR    : Madhu Ramakrishnan
-4 -- 
-5 -- PURPOSE   : The user here is supposed to fetch all the when the data is required to analyse for all placements belonging to
-                 a particular site or for all sites belonging to the campaigns
-9 -- 
-10 -- INPUTS    :Level_1_id=campaign_id, 
-11 --            Level_2_id=Site_id(Internet_media_credit_id) 
-12 --            Level_3_id=data_date
-                 Level_4=geography_type
-                 Level_5=aggregation_type
-13 -- 
-14 -- NOTES:aggregation_type(2=campaign_level,3=Designated Market area Level,4=site_Level,5=placement_level) 
-16 -- 
-17 -- SERVER/DB :jdbc:netezza://nantz40.nielsen.com:5480/MCH_NOCR_PROD_PG1 
-18 -- 
-19 --******************************************************** 
+1  --******************************************************** 
+2 -- AUTHOR    : Madhu Ramakrishnan
+3 -- PURPOSE   : The user here is supposed to fetch all the when the data is required to analyse for all placements belonging to
+4 --                 a particular site or for all sites belonging to the campaigns
+5 -- INPUTS    :Level_1_id=campaign_id, 
+6 --            Level_2_id=Site_id(Internet_media_credit_id) 
+7 --            Level_3_id=data_date
+8 --            Level_4=geography_type
+9 --            Level_5=aggregation_type
+10 --
+11 -- NOTES:aggregation_type(2=campaign_level,3=Designated Market area Level,4=site_Level,5=placement_level) 
+12 -- 
+13 -- SERVER/DB :jdbc:netezza://nantz40.nielsen.com:5480/MCH_NOCR_PROD_PG1 
+14 -- 
+15 --******************************************************** 
 
        /*PLACEMENT LEVEL OCR DATA */
     
