@@ -1,6 +1,6 @@
 1 --********************************************************  
 2 2 -- AUTHOR    : Madhu Ramakrishnan 
-3 3 -- PURPOSE   : The user here is supposed to fetch the records when the data required to analyse for a particular site belonging to 
+3 3 -- PURPOSE   : When the user requires data to analyse Site level data for a particular site belonging to 
 4 4 --                 a campaign or for all sites belonging to the campaign for a particular geography 
 5 5 -- INPUTS    :Level_1_id=campaign_id,  
 6 6 --            Level_2_id=if needed specify in where clause ,Site_id(Internet_media_credit_id)  
