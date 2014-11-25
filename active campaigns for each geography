@@ -1,3 +1,12 @@
+Atuhor:Nandagopal,Madhu Priya   
+Purpose: By using this script the user could get all the active campaigns corresponding to a particular geography 
+and for the required date.
+Inputs: level_1_id=geography_code
+        level_2_id=data_date(Recent)
+Note: Common Geography_code used are 1001-Us,1004-UK,1018-Australia,1036-Brazil,1044-Canada,1080-France,1087-Germany,114-Italy
+
+Server/DB:jdbc:netezza://nantz40.nielsen.com:5480/MCH_NOCR_PROD_PG1
+
 SELECT DISTINCT
     CAMPAIGN_tag_id,
     campaign_name,
