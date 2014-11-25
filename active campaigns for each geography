@@ -1,4 +1,4 @@
-Atuhor:Nandagopal,Madhu Priya   
+Author:Nandagopal,Madhu Priya   
 Purpose: By using this script the user could get all the active campaigns corresponding to a particular geography 
 and for the required date.
 Inputs: level_1_id=geography_code
