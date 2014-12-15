@@ -1,0 +1,21 @@
+SELECT
+  SUM(TOTAL_IMPRESSIONS) tot_imp,
+  SUM(ROBOT_IMPRESSIONS) rob_imp,
+  b.intab_period_start_date AS data_date,
+  TAG_CAMPAIGN_ID,
+  TAG_PLACEMENT_ID,
+  DEVICE_TYPE,
+  collection_period_id
+FROM SITE_CENSUS_AD_CAMPAIGN_DEVICE_TRAFFIC_IMPRESSIONS a
+JOIN intab_period b
+  ON a.collection_period_id = b.intab_period_id
+WHERE campaign_id = 284600156 --insert campaign IDs
+AND released_for_processing_flag = 'Y'
+AND SEGMENT_1_ID = 'us'
+AND GEOGRAPHY_CODE = 1
+AND intab_period_start_date = '2014-12-15' --insert data date
+GROUP BY TAG_CAMPAIGN_ID,
+         TAG_PLACEMENT_ID,
+         DEVICE_TYPE,
+         collection_period_id,
+         b.intab_period_start_date
