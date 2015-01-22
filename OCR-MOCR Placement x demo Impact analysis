@@ -1,0 +1,215 @@
+*************************************************************************************************
+AUTHOR              :  Mala Sivarajan
+PURPOSE             :  Sample script jdbc:netezza://nantz53.nielsen.com:5480/schema_name for the 			        impact analysis at Placement x demo level
+SERVER/DB URL PROD  :  jdbc:netezza://nantz40.nielsen.com:5480/MCH_NOCR_PROD_PG1
+SERVER /DB URL UAT  :  jdbc:netezza://nantz42.nielsen.com:5480/schema_name or 
+			                 jdbc:netezza://nantz56.nielsen.com:5480/schema_name
+TABLES		          :   Campaign_gross_rating_point_fact_by_Placement, 
+        	             reportable_demographic, CAMPAIGN_THIRD_PARTY_DETAIL, Campaign,
+			                 reportable_geography  
+NOTES    	          :  For UAT data, the schema name changes each and every time when NOCR support team does the reprocessing. Check with NOCR Support team for the 				correct schema name. 
+			                 Production data is usually available in the schema Nantz 40, however NOCR support team copies it in the same UAT schema for our analysis purpose. 				Check with them before doing the analysis.  
+			                  The script below has the comparison on all metrics (Reach, impressions, Target impressions etc) for Desktop, Mobile and Total Digital. However, 				for the impact analysis, we should only do comparison on the impacted 				metrics 				 
+*************************************************************************************************
+			 								 
+Step 1 – Pulling the estimated impressions and reach from the UAT tables 
+drop table table_Name_UAT;
+create table table_Name_UAT as 
+select data_date,
+Campaign_ID,
+       Geography_code,   --- Country code
+       Site_id,          
+       site_name,        
+       Placement_id,
+       Placement_Name,
+       a.DEMOGRAPHIC_ID, 
+       b.Name, 
+       DESKTOP_IMPRESSIONS AS DSK_IMPRESSIONS_UAT, DESKTOP_REACH AS DSK_UA_UAT,
+       MOBILE_IMPRESSIONS AS MBL_IMPRESSIONS_UAT, MOBILE_REACH AS MBL_UA_UAT,
+       IMPRESSIONS AS IMPRESSIONS_UAT, REACH AS UA_UAT,
+MOBILE_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT AS MOBILE_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_PROD,
+DESKTOP_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT AS DESKTOP_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_PROD, 
+CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT AS CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_PROD FROM schema_name..campaign_gross_rating_point_fact_By_Placement a
+JOIN schema_name..reportable_demographic b ON a.demographic_id = REPORTABLE_DEMOGRAPHIC_ID
+WHERE AGGREGATION_TYPE = 5   --- Placement level data
+AND (a.IMPRESSIONS >= 1000 or MOBILE_IMPRESSIONS >=1000 or DESKTOP_IMPRESSIONS >=1000)
+and geography_code = 1001    --- US only 
+AND DATA_DATE = ‘date’ --- data date when the reprocessing was done
+AND a.RELEASED_FOR_PROCESSING_FLAG = 'Y' 
+AND DEMOGRAPHIC_ID not in (2999,1999) --- ignoring the total demo buckets
+AND CAMPAIGN_ID in (select DISTINCT campaign_id from schema_name..Campaign 
+WHERE RELEASED_FOR_PROCESSING_FLAG ='Y' 
+AND COLLECTION_START_DATE >= ‘start_date’)    --- check with App Dev
+DISTRIBUTE ON RANDOM;  
+commit;
+
+SAS Command to move a table from one Database to another Database
+libname nz40 netezza database=MCH_NOCR_WORK  user=nielsenID password=xxx server='nantz40.nielsen.com' port=5480; 
+libname nz42 netezza database=MCH_UAT_WRK_TMP  user= nielsenID password=xxx server='nantz42.nielsen.com' port=5480; 
+data nz42.table_Name_UAT;
+set nz40.table_Name_UAT; 
+run;
+Step 2 – Pulling the estimated impressions and reach from the Production tables 
+drop table table_Name_PROD;
+create table table_Name_PROD as 
+select data_date,
+       Campaign_ID,
+       GEOGRAPHY_CODE,  --- Country code
+       Site_id,          
+       Site_name,        
+       Placement_id,
+       Placement_Name,
+       a.DEMOGRAPHIC_ID, 
+       b.Name, 
+       DESKTOP_IMPRESSIONS AS DSK_IMPRESSIONS_PROD, DESKTOP_REACH AS DSK_UA_PROD,
+       MOBILE_IMPRESSIONS AS MBL_IMPRESSIONS_PROD, MOBILE_REACH AS MBL_UA_PROD,
+       IMPRESSIONS AS IMPRESSIONS_PROD, REACH AS UA_PROD,
+       MOBILE_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT 
+       AS MOBILE_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_UAT,
+       DESKTOP_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT 
+	AS DESKTOP_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_UAT, 
+	CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT AS CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_UAT 
+from Schema_name..campaign_gross_rating_point_fact_By_Placement a
+JOIN Schema_name..reportable_demographic b ON a.demographic_id = REPORTABLE_DEMOGRAPHIC_ID
+WHERE AGGREGATION_TYPE = 5   --- Placement level data
+and geography_code = 1001    --- US only 
+AND (a.IMPRESSIONS >= 1000 or MOBILE_IMPRESSIONS >=1000 or DESKTOP_IMPRESSIONS >=1000)
+AND DATA_DATE = ‘date’ --- data date when the reprocessing was done
+AND a.RELEASED_FOR_PROCESSING_FLAG = 'Y' 
+AND DEMOGRAPHIC_ID not in (2999, 1999)  --- ignoring the total demo buckets
+AND CAMPAIGN_ID in (select DISTINCT campaign_id from schema_name..Campaign 
+WHERE RELEASED_FOR_PROCESSING_FLAG ='Y' 
+AND COLLECTION_START_DATE >='start_date') --- check with App Dev
+DISTRIBUTE ON RANDOM;
+commit;
+
+Step 3: For optimum performance of the Database, run the below commands
+generate statistics on table_Name_UAT; 
+generate statistics on table_Name_PROD;
+
+Step 4: Joining the above PROD and UAT table and pulling Placement x Demo % Diff
+
+drop table table_Plc_Demo;
+create table table_Plc_Demo as 
+SELECT a.data_date,
+       a.CAMPAIGN_ID,
+       a.geography_code,
+       a.SITE_ID,
+       a.Site_name,
+       a.PLACEMENT_ID,
+       a.placement_name,
+       a.DEMOGRAPHIC_ID,
+       a.name,
+       MOBILE_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_PROD,
+       MOBILE_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_UAT,
+       DESKTOP_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_PROD,
+       DESKTOP_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_UAT,
+       CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_PROD,
+       CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_UAT,
+       DSK_UA_PROD,
+       DSK_UA_UAT,
+       (DSK_UA_PROD - DSK_UA_UAT) AS DSK_UA_DIFF,
+       (CASE WHEN DSK_UA_PROD = 0 then 0 ELSE (DSK_UA_UAT / DSK_UA_PROD -1)*100  	END)::numeric(38,10) AS PERC_DIFF_DSK_UA,
+       MBL_UA_PROD,
+       MBL_UA_UAT,
+       (MBL_UA_UAT - MBL_UA_PROD) AS MBL_UA_DIFF,
+       (CASE WHEN MBL_UA_PROD = 0 then 0 ELSE (MBL_UA_UAT / MBL_UA_PROD -1)*100 	END)::numeric(38,10) AS PERC_DIFF_MBL_UA,
+       UA_PROD,
+       UA_UAT,
+       (UA_UAT - UA_PROD) AS UA_DIFF,
+       (CASE WHEN UA_PROD = 0 then 0 ELSE (UA_UAT / UA_PROD -1)*100 END)::numeric(38,10) AS 	PERC_DIFF_UA,
+       DSK_IMPRESSIONS_PROD,
+       DSK_IMPRESSIONS_UAT,
+       (DSK_IMPRESSIONS_PROD - DSK_IMPRESSIONS_UAT) AS DSK_IMPRESSIONS_DIFF,
+       (CASE WHEN DSK_IMPRESSIONS_PROD = 0 then 0 ELSE (DSK_IMPRESSIONS_UAT / 	DSK_IMPRESSIONS_PROD -1)*100 END)::numeric(38,10) AS PERC_DIFF_DSK_IMPR,
+       MBL_IMPRESSIONS_PROD,
+       MBL_IMPRESSIONS_UAT,
+       (MBL_IMPRESSIONS_UAT - MBL_IMPRESSIONS_PROD) AS MBL_IMPRESSIONS_DIFF,
+       (CASE WHEN MBL_IMPRESSIONS_PROD = 0 then 0 ELSE (MBL_IMPRESSIONS_UAT / 	MBL_IMPRESSIONS_PROD -1)*100 END)::numeric(38,10) AS PERC_DIFF_MBL_IMPR,
+       IMPRESSIONS_PROD,
+       IMPRESSIONS_UAT,
+       (IMPRESSIONS_UAT - IMPRESSIONS_PROD) AS IMPRESSIONS_DIFF,
+       (CASE WHEN IMPRESSIONS_PROD = 0 then 0 ELSE (IMPRESSIONS_UAT / IMPRESSIONS_PROD -1)*100 	END)::numeric(38,10) AS PERC_DIFF_IMPR
+	FROM (SELECT * FROM table_name_PROD) a 
+  JOIN (SELECT * FROM table_name_UAT) b ON a.data_date = b.data_date AND a.Campaign_id =     	b.campaign_id AND a.site_id = b.Site_id 
+  	AND a.Placement_id = b.Placement_id 
+  	AND a.demographic_id = b.demographic_id 
+  	AND a.GEOGRAPHY_CODE = b.GEOGRAPHY_CODE 
+  	DISTRIBUTE ON RANDOM;
+      
+Step 5: Pulling the count of impacted campaigns by + or - 10% UA diff
+
+Select count(distinct campaign_id) from table_Plc_Demo 
+where ((PERC_DIFF_DSK_UA > 10 or PERC_DIFF_DSK_UA <-10) or (PERC_DIFF_MBL_UA > 10 or PERC_DIFF_MBL_UA <-10) or (PERC_DIFF_UA > 10 or PERC_DIFF_UA <-10))
+
+Step 6: Pulling the count of impacted campaigns by + or - 10% Impressions diff
+
+Select count(distinct campaign_id)  from table_Plc_Demo 
+where ((PERC_DIFF_DSK_IMPR > 10 or PERC_DIFF_DSK_IMPR <-10) or (PERC_DIFF_MBL_IMPR > 10 or PERC_DIFF_MBL_IMPR <-10) or (PERC_DIFF_IMPR > 10 or PERC_DIFF_IMPR <-10))
+
+Step 7: Adding the owners, Target genders, and other info to produce the report
+
+SELECT a.data_date,
+       collection_start_date,
+       c.CAMPAIGN_tag_ID,
+       a.campaign_id,
+       campaign_name,
+       REPORTABLE_GEOGRAPHY_DESC AS country_Name,
+       a.SITE_ID,
+       a.Site_name,
+       a.PLACEMENT_ID,
+       a.placement_name,
+       a.DEMOGRAPHIC_ID,
+       a.name,
+       DSK_UA_PROD,
+       DSK_UA_UAT,
+       DSK_UA_DIFF,
+       PERC_DIFF_DSK_UA,
+       MBL_UA_PROD,
+       MBL_UA_UAT,
+       MBL_UA_DIFF,
+       PERC_DIFF_MBL_UA,
+       UA_PROD,
+       UA_UAT,
+       UA_DIFF,
+       PERC_DIFF_UA,
+       TARGET_GENDER_ALPHA_TYPE_CODE AS Target_gender,
+       TARGET_START_AGE,
+       TARGET_END_AGE,
+       MOBILE_ CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_PROD,
+       MOBILE_ CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_UAT,
+       DESKTOP_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_PROD,
+       DESKTOP_CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_UAT,
+       CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_PROD,
+       CAMPAIGN_TARGET_DEMOGRAPHIC_IMPRESSIONS_PERCENT_UAT,
+       PRIMARY_OWNER,
+       SECONDARY_OWNER
+FROM table_Plc_Demo a 
+  JOIN (SELECT *
+        FROM schema_name..campaign
+        WHERE RELEASED_FOR_PROCESSING_FLAG = 'Y') b ON c.campaign_id = b.campaign_id 
+  JOIN schema_name..reportable_geography g ON a.geography_code = g.REPORTABLE_GEOGRAPHY_CODE 
+  LEFT JOIN (SELECT P.CAMPAIGN_ID,
+                    PRIMARY_OWNER,
+                    SECONDARY_OWNER
+             FROM (SELECT DISTINCT CAMPAIGN_ID,
+                          a.OWNER_NAME AS PRIMARY_OWNER,
+                          OWNER_ID
+                   FROM schema_name..CAMPAIGN_THIRD_PARTY_DETAIL a
+                   WHERE RELEASED_FOR_PROCESSING_FLAG = 'Y'
+                   AND   OWNER_LEVEL = 'P') P 
+               LEFT JOIN (SELECT DISTINCT CAMPAIGN_ID,
+                                 a.OWNER_NAME AS SECONDARY_OWNER,
+                                 OWNER_ID
+                          FROM schema_name..CAMPAIGN_THIRD_PARTY_DETAIL a
+                          WHERE RELEASED_FOR_PROCESSING_FLAG = 'Y'
+                          AND   OWNER_LEVEL = 'S'
+                          AND   OWNER_ID = (SELECT MAX(OWNER_ID)
+                                            FROM schema_name..CAMPAIGN_THIRD_PARTY_DETAIL b
+                                            WHERE a.campaign_id = b.campaign_id
+                                            AND   OWNER_LEVEL = 'S'
+                                            AND   RELEASED_FOR_PROCESSING_FLAG = 'Y')) S ON P.CAMPAIGN_ID = S.CAMPAIGN_ID) O ON C.campaign_id = O.campaign_ID
+WHERE ((PERC_DIFF_DSK_UA > 10 OR PERC_DIFF_DSK_UA < -10) OR (PERC_DIFF_MBL_UA > 10 OR PERC_DIFF_MBL_UA < -10) OR (PERC_DIFF_UA > 10 OR PERC_DIFF_UA < -10))
+OR    ((PERC_DIFF_DSK_IMPR > 10 OR PERC_DIFF_DSK_IMPR < -10) OR (PERC_DIFF_MBL_IMPR > 10 OR PERC_DIFF_MBL_IMPR < -10) OR (PERC_DIFF_IMPR > 10 OR PERC_DIFF_IMPR < -10))
+ORDER BY a.CAMPAIGN_ID;
+
