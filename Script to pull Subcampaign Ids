@@ -1,0 +1,23 @@
+*****************************************************************************
+AUTHOR              :  Mala Sivarajan
+PURPOSE             :  Sample script for the Pulling Subcampaign id
+SERVER/DB URL PROD  :  jdbc:netezza://nantz40.nielsen.com:5480/MCH_NOCR_PROD_PG1
+TABLES              :  Campaign     
+*****************************************************************************
+select CAMPAIGN_ID,
+       max(case when rank_id=1 then SUB_CAMPAIGN_ID end) SUB_CAMPAIGN_ID1,
+	max(case when rank_id=2 then SUB_CAMPAIGN_ID end) SUB_CAMPAIGN_ID2,
+       max(case when rank_id=3 then SUB_CAMPAIGN_ID end) SUB_CAMPAIGN_ID3,
+       max(case when rank_id=4 then SUB_CAMPAIGN_ID end) SUB_CAMPAIGN_ID4,
+       max(case when rank_id=5 then SUB_CAMPAIGN_ID end) SUB_CAMPAIGN_ID5
+       from (
+select c.PARENT_CAMPAIGN_ID as campaign_id,sub.CAMPAIGN_ID as   sub_campaign_id,sub.CAMPAIGN_TAG_ID,
+       case when sub.CAMPAIGN_TAG_ID is null then null else rank() over 
+       (partition by c.PARENT_CAMPAIGN_ID order by sub.CAMPAIGN_TAG_ID desc) end rank_id 
+ from 
+(select * from schema_name..campaign where RELEASED_FOR_PROCESSING_FLAG='Y') c  join 
+(select DISTINCT CAMPAIGN_TAG_ID,CAMPAIGN_ID,PARENT_CAMPAIGN_ID 
+from schema_name..campaign where CAMPAIGN_TAG_ID like 'scm%' and RELEASED_FOR_PROCESSING_FLAG='Y') sub
+on c.CAMPAIGN_ID=sub.CAMPAIGN_ID)a 
+group by CAMPAIGN_ID
+
